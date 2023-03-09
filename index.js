@@ -27,6 +27,25 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
+
+// middleWare for verify JWT 
+function verifyJWT(req,res,next){
+  const authHeader = req.headers.authorization;
+  if(!authHeader){
+    res.status(401).send('unauthorized access')
+  }
+
+  const token = authHeader.split(' ')[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN,function(err,decoded){
+    if(err){
+      return res.status(403).send({message: 'forbidden access'})
+    }
+  })
+  req.decoded = decoded;
+  next()
+}
+
+
 async function run() {
   try {
     // collections
@@ -36,6 +55,7 @@ async function run() {
       .collection("singleCategory");
     const bookingsCollection = client.db("soundMusic").collection("bookings");
     const usersCollection = client.db("soundMusic").collection("users");
+    const orderssCollection = client.db("soundMusic").collection("orders");
 
     // general/initial api
     app.get("/", (req, res) => {
@@ -61,6 +81,11 @@ async function run() {
     // payment with sslcommerz
     app.post("/order", async (req, res) => {
       const order = req.body;
+
+      if(!order.price || !order.email || !order.phone){
+        return res.send({error: "Please provide all"})
+      }
+      const transId = uuid();
       // check the id & price on db
       const orderedProduct = await bookingsCollection.findOne({
         _id: new ObjectId(order.productId),
@@ -69,10 +94,10 @@ async function run() {
       const data = {
         total_amount: orderedProduct.price,
         currency: "BDT",
-        tran_id: uuid(), //unique tran_id for each api call
-        success_url: "http://localhost:3030/success",
-        fail_url: "http://localhost:3030/fail",
-        cancel_url: "http://localhost:3030/cancel",
+        tran_id: transId, //unique tran_id for each api call
+        success_url: `http://localhost:5000/payment/success?transactionId=${transId}`,
+        fail_url: `http://localhost:5000/payment/fail?transactionId=${transId}`,
+        cancel_url: "http://localhost:5000/payment/cancel",
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: order.productName,
@@ -101,9 +126,52 @@ async function run() {
       sslcz.init(data).then((apiResponse) => {
         // Redirect the user to payment gateway
         let GatewayPageURL = apiResponse.GatewayPageURL;
-        console.log(apiResponse);
-        res.send({url:GatewayPageURL});
+
+        // save order to db
+        orderssCollection.insertOne({
+          ...order,
+          price: orderedProduct.price,
+          transactionId: transId,
+          paid: false,
+        });
+        res.send({ url: GatewayPageURL });
       });
+    });
+
+    // payment success api
+    app.post("/payment/success", async (req, res) => {
+      const { transactionId } = req.query;
+      if (!transactionId) {
+        return res.redirect("http://localhost:3000/payment/fail");
+      }
+      const result = await orderssCollection.updateOne(
+        { transactionId },
+        { $set: { paid: true, paidAt: new Date() } }
+      );
+      if (result.modifiedCount > 0) {
+        res.redirect(
+          `http://localhost:3000/payment/success?transactionId=${transactionId}`
+        );
+      }
+    });
+
+    // get specific trans id details
+    app.get("/orders/by-transaction-id/:id", async (req, res) => {
+      const { id } = req.params;
+      const order = await orderssCollection.findOne({ transactionId: id });
+      res.send(order);
+    });
+
+    // payment failure api
+    app.post("/payment/fail", async (req, res) => {
+      const { transactionId } = req.query;
+      if (!transactionId) {
+        return res.redirect("http://localhost:3000/payment/fail");
+      }
+      const result = await orderssCollection.deleteOne({ transactionId });
+      if (result.deletedCount) {
+        res.redirect("http://localhost:3000/payment/fail");
+      }
     });
     //------------------  SSLCommerz api  ----------------//
 
@@ -168,6 +236,10 @@ async function run() {
     // get all booking data
     app.get("/bookings", async (req, res) => {
       const email = req.query.email;
+      // const decodedEmail = req.decoded.email;
+      // if(email !== decodedEmail){
+      //   return res.status(403).send({message: 'forbidden access'})
+      // }
       const query = { buyerEmail: email };
       const bookings = await bookingsCollection.find(query).toArray();
       res.send(bookings);
@@ -182,6 +254,25 @@ async function run() {
       console.log(result);
     });
     //---------------   users api -------------//
+
+
+
+    //--------------- all  users api -------------//
+    app.get('/users', async(req,res)=>{
+      const query = {};
+      const users = await usersCollection.find(query).toArray()
+      res.send(users)
+    }) 
+    //--------------- all  users api -------------//
+
+    // check weather a person admin or not api 
+    app.get('/users/admin/:email', async(req,res)=>{
+      const email = req.params.email;
+      const query = { email }
+      const user = await usersCollection.findOne(query);
+      res.send({ isAdmin: user?.role === 'admin'})
+    })
+
   } finally {
   }
 }
