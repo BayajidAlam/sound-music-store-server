@@ -27,24 +27,22 @@ const client = new MongoClient(uri, {
   serverApi: ServerApiVersion.v1,
 });
 
-
-// middleWare for verify JWT 
-function verifyJWT(req,res,next){
+// middleWare for verify JWT
+function verifyJWT(req, res, next) {
   const authHeader = req.headers.authorization;
-  if(!authHeader){
-    res.status(401).send('unauthorized access')
+  if (!authHeader) {
+    res.status(401).send("unauthorized access");
   }
 
-  const token = authHeader.split(' ')[1];
-  jwt.verify(token, process.env.ACCESS_TOKEN,function(err,decoded){
-    if(err){
-      return res.status(403).send({message: 'forbidden access'})
+  const token = authHeader.split(" ")[1];
+  jwt.verify(token, process.env.ACCESS_TOKEN, function (err, decoded) {
+    if (err) {
+      return res.status(403).send({ message: "forbidden access" });
     }
-  })
+  });
   req.decoded = decoded;
-  next()
+  next();
 }
-
 
 async function run() {
   try {
@@ -82,8 +80,8 @@ async function run() {
     app.post("/order", async (req, res) => {
       const order = req.body;
 
-      if(!order.price || !order.email || !order.phone){
-        return res.send({error: "Please provide all"})
+      if (!order.price || !order.email || !order.phone) {
+        return res.send({ error: "Please provide all" });
       }
       const transId = uuid();
       // check the id & price on db
@@ -95,9 +93,9 @@ async function run() {
         total_amount: orderedProduct.price,
         currency: "BDT",
         tran_id: transId, //unique tran_id for each api call
-        success_url: `http://localhost:5000/payment/success?transactionId=${transId}`,
-        fail_url: `http://localhost:5000/payment/fail?transactionId=${transId}`,
-        cancel_url: "http://localhost:5000/payment/cancel",
+        success_url: `https://sound-music-server.vercel.app/payment/success?transactionId=${transId}`,
+        fail_url: `https://sound-music-server.vercel.app/payment/fail?transactionId=${transId}`,
+        cancel_url: "https://sound-music-server.vercel.app/payment/cancel",
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: order.productName,
@@ -144,6 +142,7 @@ async function run() {
       if (!transactionId) {
         return res.redirect("http://localhost:3000/payment/fail");
       }
+
       const result = await orderssCollection.updateOne(
         { transactionId },
         { $set: { paid: true, paidAt: new Date() } }
@@ -255,24 +254,95 @@ async function run() {
     });
     //---------------   users api -------------//
 
-
-
-    //--------------- all  users api -------------//
-    app.get('/users', async(req,res)=>{
-      const query = {};
-      const users = await usersCollection.find(query).toArray()
-      res.send(users)
-    }) 
-    //--------------- all  users api -------------//
-
-    // check weather a person admin or not api 
-    app.get('/users/admin/:email', async(req,res)=>{
+    //--------------- seller dashboard api -------------//
+    // get a user
+    app.get("/user/:email", async (req, res) => {
       const email = req.params.email;
-      const query = { email }
+      const query = { email };
       const user = await usersCollection.findOne(query);
-      res.send({ isAdmin: user?.role === 'admin'})
+      res.send(user);
+    });
+
+    //  post a product
+    app.post("/product", async (req, res) => {
+      const product = req.body;
+      const result = await singleCategoryCollection.insertOne(product);
+      res.send(result);
+    });
+
+    // get all product of a seller
+    app.get("/myProduct/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const result = await singleCategoryCollection.find(query).toArray();
+      res.send(result);
+    });
+
+    app.get("/mySeller", async (req, res) => {
+      const email = req.query.email;
+      const query = {
+        sellerEmail: email,
+      };
+      const buyers = await bookingsCollection.find(query).toArray();
+      res.send(buyers);
+      console.log(buyers);
+    });
+
+    // advertise a item 
+    app.put('/advertisement/:id', async(req,res)=>{
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) }
+      const option = { upsert: true }
+      const recevedDoc = req.body;
+      const updatedDoc = { 
+        $set: {
+          addState: recevedDoc.state
+        }
+      }
+      const result = await singleCategoryCollection.updateOne(filter,updatedDoc,option);
+      res.send(result);
+      console.log(result);
     })
 
+    // delete a product 
+    app.delete('/delete/:id', async(req,res)=>{
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id)}
+      const result = await singleCategoryCollection.deleteOne(query);
+      res.send(result)
+    })
+    //--------------- seller dashboard api -------------//
+
+
+    //--------------- admin dashboard api -------------//
+    // get all seller 
+    //--------------- admin dashboard api -------------//
+
+    //--------------- manage user role  -------------//
+    // check weather a person admin or not api
+    app.get("/users/admin/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const admin = await usersCollection.findOne(query);
+      res.send({ isAdmin: admin?.role === "admin" });
+    });
+
+    // check weather a person seller or not api
+    app.get("/users/seller/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const seller = await usersCollection.findOne(query);
+      res.send({ isSeller: seller?.role === "seller" });
+    });
+
+    // check weather a person user or not api
+    app.get("/users/buyer/:email", async (req, res) => {
+      const email = req.params.email;
+      const query = { email };
+      const buyer = await usersCollection.findOne(query);
+      res.send({ isBuyer: buyer?.role === "buyer" });
+    });
+    //--------------- manage user role  -------------//
   } finally {
   }
 }
