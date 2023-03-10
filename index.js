@@ -316,6 +316,56 @@ async function run() {
 
     //--------------- admin dashboard api -------------//
     // get all seller 
+    app.get('/allSellers', async(req,res)=>{
+      const userRole = req.query.role;
+      const query = { role: userRole }
+      const result = await usersCollection.find(query).toArray()
+      res.send(result)
+    })
+
+  
+      // delete a seller 
+      app.delete('/deleteSeller/:id', async(req,res)=>{
+        const id = req.params.id;
+        const query = {_id: new ObjectId(id)}
+        const result = await usersCollection
+        .deleteOne(query)
+        res.send(result)
+      })
+
+      // get all buyer 
+      app.get('/allBuyer', async(req,res)=>{
+        const userRole = req.query.role;
+        const query = { role: userRole }      
+        const result = await usersCollection.find(query).toArray()
+        res.send(result)
+      })
+
+      // delete a buyer 
+      app.delete('/deleteBuyer/:id', async(req,res)=>{
+        const id = req.params.id;
+        const query = { _id : new ObjectId(id)}
+        const result = await usersCollection.deleteOne(query);
+        res.send(result)
+      })
+
+      // get all reported item 
+      app.get('/reportedItem', async(req,res)=>{
+        const query = {
+            reportState : 'reported'
+        }
+        const result = await singleCategoryCollection.find(query).toArray();
+        res.send(result);
+        console.log(result);
+      })
+
+      // delete a reported item 
+      app.delete('/deleteReported/:id', async(req,res)=>{
+        const id = req.params.id;
+        const query = { _id: new ObjectId(id) }
+        const result = await singleCategoryCollection.deleteOne(query);
+        res.send(result);
+      })
     //--------------- admin dashboard api -------------//
 
     //--------------- manage user role  -------------//
