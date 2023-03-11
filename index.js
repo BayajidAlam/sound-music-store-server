@@ -189,7 +189,10 @@ async function run() {
     app.get("/category", async (req, res) => {
       const name = req.query.name;
       const query = { catName: name };
-      const data = await singleCategoryCollection.find(query).toArray();
+      const data = await singleCategoryCollection
+        .find(query)
+        .limit(4)
+        .toArray();
       res.send(data);
     });
 
@@ -288,84 +291,85 @@ async function run() {
       console.log(buyers);
     });
 
-    // advertise a item 
-    app.put('/advertisement/:id', async(req,res)=>{
+    // advertise a item
+    app.put("/advertisement/:id", async (req, res) => {
       const id = req.params.id;
-      const filter = { _id: new ObjectId(id) }
-      const option = { upsert: true }
+      const filter = { _id: new ObjectId(id) };
+      const option = { upsert: true };
       const recevedDoc = req.body;
-      const updatedDoc = { 
+      const updatedDoc = {
         $set: {
-          addState: recevedDoc.state
-        }
-      }
-      const result = await singleCategoryCollection.updateOne(filter,updatedDoc,option);
+          addState: recevedDoc.state,
+        },
+      };
+      const result = await singleCategoryCollection.updateOne(
+        filter,
+        updatedDoc,
+        option
+      );
       res.send(result);
       console.log(result);
-    })
+    });
 
-    // delete a product 
-    app.delete('/delete/:id', async(req,res)=>{
+    // delete a product
+    app.delete("/delete/:id", async (req, res) => {
       const id = req.params.id;
-      const query = { _id: new ObjectId(id)}
+      const query = { _id: new ObjectId(id) };
       const result = await singleCategoryCollection.deleteOne(query);
-      res.send(result)
-    })
+      res.send(result);
+    });
     //--------------- seller dashboard api -------------//
 
-
     //--------------- admin dashboard api -------------//
-    // get all seller 
-    app.get('/allSellers', async(req,res)=>{
+    // get all seller
+    app.get("/allSellers", async (req, res) => {
       const userRole = req.query.role;
-      const query = { role: userRole }
-      const result = await usersCollection.find(query).toArray()
-      res.send(result)
-    })
+      const query = { role: userRole };
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
 
-  
-      // delete a seller 
-      app.delete('/deleteSeller/:id', async(req,res)=>{
-        const id = req.params.id;
-        const query = {_id: new ObjectId(id)}
-        const result = await usersCollection
-        .deleteOne(query)
-        res.send(result)
-      })
+    // delete a seller
+    app.delete("/deleteSeller/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
 
-      // get all buyer 
-      app.get('/allBuyer', async(req,res)=>{
-        const userRole = req.query.role;
-        const query = { role: userRole }      
-        const result = await usersCollection.find(query).toArray()
-        res.send(result)
-      })
+    // get all buyer
+    app.get("/allBuyer", async (req, res) => {
+      const userRole = req.query.role;
+      const query = { role: userRole };
+      const result = await usersCollection.find(query).toArray();
+      res.send(result);
+    });
 
-      // delete a buyer 
-      app.delete('/deleteBuyer/:id', async(req,res)=>{
-        const id = req.params.id;
-        const query = { _id : new ObjectId(id)}
-        const result = await usersCollection.deleteOne(query);
-        res.send(result)
-      })
+    // delete a buyer
+    app.delete("/deleteBuyer/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await usersCollection.deleteOne(query);
+      res.send(result);
+    });
 
-      // get all reported item 
-      app.get('/reportedItem', async(req,res)=>{
-        const query = {
-            reportState : 'reported'
-        }
-        const result = await singleCategoryCollection.find(query).toArray();
-        res.send(result);
-        console.log(result);
-      })
+    // get all reported item
+    app.get("/reportedItem", async (req, res) => {
+      const query = {
+        reportState: "reported",
+      };
+      const result = await singleCategoryCollection.find(query).toArray();
+      res.send(result);
+      console.log(result);
+    });
 
-      // delete a reported item 
-      app.delete('/deleteReported/:id', async(req,res)=>{
-        const id = req.params.id;
-        const query = { _id: new ObjectId(id) }
-        const result = await singleCategoryCollection.deleteOne(query);
-        res.send(result);
-      })
+    // delete a reported item
+    app.delete("/deleteReported/:id", async (req, res) => {
+      const id = req.params.id;
+      const query = { _id: new ObjectId(id) };
+      const result = await singleCategoryCollection.deleteOne(query);
+      res.send(result);
+    });
     //--------------- admin dashboard api -------------//
 
     //--------------- manage user role  -------------//
@@ -393,6 +397,43 @@ async function run() {
       res.send({ isBuyer: buyer?.role === "buyer" });
     });
     //--------------- manage user role  -------------//
+
+    // home api
+    // get all advertised item
+    app.get("/advertised", async (req, res) => {
+      const query = {
+        addState: "advertised",
+      };
+      const result = await singleCategoryCollection
+        .find(query)
+        .limit(4)
+        .toArray();
+      res.send(result);
+    });
+
+
+    // user api 
+    // report a product
+    app.put("/report/:id", async (req, res) => {
+      const id = req.params.id;
+      const filter = { _id: new ObjectId(id) };
+      const recevedDoc = req.body;
+      const options = { upsert: true };
+      if (recevedDoc.productReportState === "not reported") {
+        const updatedDoc = {
+          $set: {
+            reportState: "reported",
+          },
+        };
+        const result = await singleCategoryCollection.updateOne(
+          filter,
+          updatedDoc,
+          options
+        );
+        res.send(result);
+      }
+    });
+
   } finally {
   }
 }
