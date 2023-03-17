@@ -140,7 +140,7 @@ async function run() {
     app.post("/payment/success", async (req, res) => {
       const { transactionId } = req.query;
       if (!transactionId) {
-        return res.redirect("http://localhost:3000/payment/fail");
+        return res.redirect("https://sound-music-store.web.app/payment/fail");
       }
 
       const result = await orderssCollection.updateOne(
@@ -149,7 +149,7 @@ async function run() {
       );
       if (result.modifiedCount > 0) {
         res.redirect(
-          `http://localhost:3000/payment/success?transactionId=${transactionId}`
+          `https://sound-music-store.web.app/payment/success?transactionId=${transactionId}`
         );
       }
     });
@@ -165,11 +165,11 @@ async function run() {
     app.post("/payment/fail", async (req, res) => {
       const { transactionId } = req.query;
       if (!transactionId) {
-        return res.redirect("http://localhost:3000/payment/fail");
+        return res.redirect("https://sound-music-store.web.app/payment/fail");
       }
       const result = await orderssCollection.deleteOne({ transactionId });
       if (result.deletedCount) {
-        res.redirect("http://localhost:3000/payment/fail");
+        res.redirect("https://sound-music-store.web.app/payment/fail");
       }
     });
     //------------------  SSLCommerz api  ----------------//
@@ -411,8 +411,7 @@ async function run() {
       res.send(result);
     });
 
-
-    // user api 
+    // user api
     // report a product
     app.put("/report/:id", async (req, res) => {
       const id = req.params.id;
@@ -433,7 +432,6 @@ async function run() {
         res.send(result);
       }
     });
-
   } finally {
   }
 }
