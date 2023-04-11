@@ -93,9 +93,9 @@ async function run() {
         total_amount: orderedProduct.price,
         currency: "BDT",
         tran_id: transId, //unique tran_id for each api call
-        success_url: `https://sound-music-server.vercel.app/payment/success?transactionId=${transId}`,
-        fail_url: `https://sound-music-server.vercel.app/payment/fail?transactionId=${transId}`,
-        cancel_url: "https://sound-music-server.vercel.app/payment/cancel",
+        success_url: `https://sound-music-server.onrender.com/payment/success?transactionId=${transId}`,
+        fail_url: `https://sound-music-server.onrender.com/payment/fail?transactionId=${transId}`,
+        cancel_url: "https://sound-music-server.onrender.com/payment/cancel",
         ipn_url: "http://localhost:3030/ipn",
         shipping_method: "Courier",
         product_name: order.productName,
